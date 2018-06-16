@@ -60,6 +60,13 @@
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <exec_depend>darknet_ros_msgs</exec_depend>
+  <build_depend>darknet_ros_msgs</build_depend>
+  <exec_depend>phd_msgs</exec_depend>
+  <build_depend>phd_msgs</build_depend>
+
+
+ 
 
 
   <!-- The export tag contains other, unspecified, tags -->
