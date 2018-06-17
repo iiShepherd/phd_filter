@@ -86,13 +86,13 @@ void Boundingboxes_Callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg
 
 //main function
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "detection_converter");
 	ros::NodeHandle nh;
 
-	ros::Subscriber camera_sub = nh.subscribe("/camera_info", 1, &camera_info_Callback);
-	ros::Subscriber det_sub = nh.subscribe("/boundingboxes", 1, &Boundingboxes_Callback);
+	ros::Subscriber camera_sub = nh.subscribe("camera_info", 1, camera_info_Callback);
+	ros::Subscriber det_sub = nh.subscribe("boundingboxes", 1, Boundingboxes_Callback);
 
 
 	bearing_array.array[0].min_range = min_rng;
@@ -108,15 +108,16 @@ int main(int argc, char** argv)
 
 
 
+	ROS_INFO("Converting object detections to bearings...");
 
-
-
+	while(ros::ok)
+	{
 	//Publish Bearing array
 	ros::Publisher bearing_pub;
 	bearing_pub.publish(bearing_array);
+	ros::spinOnce();
+	}
 
-	ROS_INFO("Converting object detections to bearings...");
-	ros::spin();
 	return 0;
 
 }
