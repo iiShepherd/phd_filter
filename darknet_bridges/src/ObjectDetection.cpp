@@ -69,12 +69,12 @@ void camera_info_Callback(const sensor_msgs::CameraInfo::ConstPtr& msg)
 void Boundingboxes_Callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg)
 {
 
-	Class = msg->bounding_boxes[0];
-	probability = msg->bounding_boxes[1];
-	xmin = msg->bounding_boxes[2];
-	ymin = msg->bounding_boxes[3];
-	xmax = msg->bounding_boxes[4];
-	ymax = msg->bounding_boxes[5];
+	Class = msg->bounding_boxes[0].Class;
+	probability = msg->bounding_boxes[0].probability;
+	xmin = msg->bounding_boxes[0].xmin;
+	ymin = msg->bounding_boxes[0].ymin;
+	xmax = msg->bounding_boxes[0].xmax;
+	ymax = msg->bounding_boxes[0].ymax;
 
 }
 
@@ -86,7 +86,7 @@ void Boundingboxes_Callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg
 
 //main function
 
-int main(int argc, char ** argv)
+int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "detection_converter");
 	ros::NodeHandle nh;
@@ -95,16 +95,17 @@ int main(int argc, char ** argv)
 	ros::Subscriber det_sub = nh.subscribe("/boundingboxes", 1, &Boundingboxes_Callback);
 
 
-	bearing_array.array[1].min_range = min_rng;
-	bearing_array.array[2].max_range = max_rng;
-	bearing_array.array[3].min_bearing = min_ang;
-	bearing_array.array[4].max_bearing = max_ang;
-	bearing_array.array[6].Class = Class;
-	bearing_array.array[7].probability = probability;
-	bearing_array.array[8].xmin = xmin;
-	bearing_array.array[9].xmax = xmax;
-	bearing_array.array[10].xmax = xmax;
-	bearing_array.array[11].ymax = ymax;
+	bearing_array.array[0].min_range = min_rng;
+	bearing_array.array[1].max_range = max_rng;
+	bearing_array.array[2].min_bearing = min_ang;
+	bearing_array.array[3].max_bearing = max_ang;
+	bearing_array.array[4].Class = Class;
+	bearing_array.array[5].probability = probability;
+	bearing_array.array[6].xmin = xmin;
+	bearing_array.array[7].xmax = xmax;
+	bearing_array.array[8].xmax = xmax;
+	bearing_array.array[9].ymax = ymax;
+
 
 
 
