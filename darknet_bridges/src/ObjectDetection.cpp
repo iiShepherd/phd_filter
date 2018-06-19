@@ -13,7 +13,6 @@
 
 
 //=============================================================================\\
-cd ca
 //Beginning of Initializaiton 
 
 //Camera info
@@ -26,6 +25,7 @@ double max_rng = 15;
 double min_ang = 0;
 double max_ang = 0;
 uint32_t width = 0;
+
 geometry_msgs::PoseStamped currPose;
 
 //ObjectDetection
@@ -103,10 +103,11 @@ int main(int argc, char **argv)
 	while(ros::ok)
 	{
 	phd_msgs::BearingArray  bearing_array;
-	std::string sensor_frame_id;
-	bearing_array.child_frame_id = sensor_frame_id;
+	std::string child_frame_id;
+	bearing_array.child_frame_id = child_frame_id;
+	bearing_array.pose = currPose;
 	
-	bearing_array.array.resize(1);
+	bearing_array.array.resize(1);									// array  needs to be dynamic
 	bearing_array.array[0].min_range = min_rng;
 	bearing_array.array[0].max_range = max_rng;
 	bearing_array.array[0].min_bearing = min_ang;
@@ -115,7 +116,7 @@ int main(int argc, char **argv)
 	bearing_array.array[0].probability = probability;
 	bearing_array.array[0].xmin = xmin;
 	bearing_array.array[0].xmax = xmax;
-	bearing_array.array[0].xmax = xmax;
+	bearing_array.array[0].ymin = ymin;
 	bearing_array.array[0].ymax = ymax;
 
 	//Publish Bearing array
