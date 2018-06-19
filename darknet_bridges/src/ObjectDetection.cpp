@@ -1,6 +1,7 @@
 #include <cmath>
 #include <stdint.h>
 #include <string>
+#include <iostream>
 
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
@@ -12,7 +13,7 @@
 
 
 //=============================================================================\\
-
+cd ca
 //Beginning of Initializaiton 
 
 //Camera info
@@ -24,10 +25,10 @@ double min_rng = 0.2;
 double max_rng = 15;
 double min_ang = 0;
 double max_ang = 0;
-uint32_t width;
+uint32_t width = 0;
+geometry_msgs::PoseStamped currPose;
 
 //ObjectDetection
-phd_msgs::BearingArray  bearing_array;
 std::string Class;
 double probability = 0;
 int64_t xmin=0;
@@ -62,6 +63,7 @@ void camera_info_Callback(const sensor_msgs::CameraInfo::ConstPtr& msg)
 	min_ang = std::atan((cx - width) / fx);
 	max_ang = std::atan((cx - 1 / fx));
 
+
 }
 
 //Object Detection from 
@@ -75,6 +77,8 @@ void Boundingboxes_Callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg
 	ymin = msg->bounding_boxes[0].ymin;
 	xmax = msg->bounding_boxes[0].xmax;
 	ymax = msg->bounding_boxes[0].ymax;
+
+
 
 }
 
@@ -91,35 +95,37 @@ int main(int argc, char **argv)
 	ros::init(argc, argv, "detection_converter");
 	ros::NodeHandle nh;
 
-	ros::Subscriber camera_sub = nh.subscribe("camera_info", 1, camera_info_Callback);
-	ros::Subscriber det_sub = nh.subscribe("boundingboxes", 1, Boundingboxes_Callback);
-
-
-	bearing_array.array[0].min_range = min_rng;
-	bearing_array.array[1].max_range = max_rng;
-	bearing_array.array[2].min_bearing = min_ang;
-	bearing_array.array[3].max_bearing = max_ang;
-	bearing_array.array[4].Class = Class;
-	bearing_array.array[5].probability = probability;
-	bearing_array.array[6].xmin = xmin;
-	bearing_array.array[7].xmax = xmax;
-	bearing_array.array[8].xmax = xmax;
-	bearing_array.array[9].ymax = ymax;
-
-
+	ros::Subscriber camera_sub = nh.subscribe("/usb_cam/camera_info", 1, &camera_info_Callback);
+	ros::Subscriber det_sub = nh.subscribe("/darknet_ros/bounding_boxes", 1, &Boundingboxes_Callback);
 
 	ROS_INFO("Converting object detections to bearings...");
 
 	while(ros::ok)
 	{
+	phd_msgs::BearingArray  bearing_array;
+	std::string sensor_frame_id;
+	bearing_array.child_frame_id = sensor_frame_id;
+	
+	bearing_array.array.resize(1);
+	bearing_array.array[0].min_range = min_rng;
+	bearing_array.array[0].max_range = max_rng;
+	bearing_array.array[0].min_bearing = min_ang;
+	bearing_array.array[0].max_bearing = max_ang;
+	bearing_array.array[0].Class = Class;
+	bearing_array.array[0].probability = probability;
+	bearing_array.array[0].xmin = xmin;
+	bearing_array.array[0].xmax = xmax;
+	bearing_array.array[0].xmax = xmax;
+	bearing_array.array[0].ymax = ymax;
+
 	//Publish Bearing array
-	ros::Publisher bearing_pub;
+	ros::Publisher bearing_pub = nh.advertise<phd_msgs::BearingArray>("/bridge/measurement", 100);
+
 	bearing_pub.publish(bearing_array);
 	ros::spinOnce();
 	}
 
-	return 0;
- 
+ return 0;
 }
 
 
