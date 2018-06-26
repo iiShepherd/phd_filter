@@ -3,7 +3,7 @@
 #include <iostream>
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Camerainfo.h>
+#include <sensor_msgs/CameraInfo.h>
 #include "darknet_ros_msgs/BoundingBoxes.h"
 #include "phd_msgs/BearingArray.h"
 
@@ -32,18 +32,21 @@ struct var
 	uint32_t width;
 
 	//ROS
-	ros::NodeHandle nh;
-	ros::publisher bearing_pub;
+	ros::Publisher bearing_pub;
 
 	//array num_det
 	phd_msgs::BearingArray bearing_array;
 	unsigned int num_det;
+	
+	//pose
+	geometry_msgs::PoseStamped currPose;
 }param;
 
 	//callback functions
-void camera_info_callback(const sensor_msgs::Camerainfo::COnstPtr& msg)
+void camera_info_callback(const sensor_msgs::CameraInfo::ConstPtr& msg)
 {
-	param.child_frame_id = msg->header.frame_id;
+
+	
 	param.width = msg->width;
 	//focal length
 	param.fx = msg->K[0];
@@ -52,38 +55,47 @@ void camera_info_callback(const sensor_msgs::Camerainfo::COnstPtr& msg)
 	param.cx = msg->K[2];
 	param.cy = msg->K[5];
 	//min/max angle
-	param.min_ang = std::atan((cx - width) / fx);
-	param.max_ang = std::atan((cx - 1) / fx);
+	param.min_ang = std::atan((param.cx - param.width) / param.fx);
+	param.max_ang = std::atan((param.cx - 1) / param.fx);
 
 
 }
-void boundingboxes_callback(const dakrnet_ros_msgs::BoundingBoxes::ConstPtr& msg)
+void pose_callback ( const nav_msgs::Odometry::ConstPtr& msg)
 {
-	param.Class = msg->bounding_boxes[0].Class;
-	param.probability = msg->bounding_boxes[0].probability;
-	param.xmin = msg->bounding_boxes[0].xmin;
-	param.ymin = msg->bounding_boxes[0].ymin;
-	param.xmax = msg->bounding_boxes[0].xmax;
-	param.ymax = msg->bounding_boxes[0].ymax;
+	param.currPose.header = msg->header;
+	param.currPose.pose= (msg->pose).pose;
 
+}
+void boundingboxes_callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg)
+{
 	param.num_det = msg->bounding_boxes.size();
-	bearing_array.array.resize(num_det);
-	for (unsigned int k = 0; k < num_det; ++k)
+	param.bearing_array.array.resize(param.num_det);
+
+	for (unsigned int k = 0; k < param.num_det; ++k)
 	{
-		double centerx = (xmax + xmin) / 2;
-		bearing_array.array[k].bearing = std::atan((param.cx - centerx) / param.fx);
-		bearing_array.array[k].min_range = param.min_rng;
-		bearing_array.array[k].max_range = param.max_rng;
-		bearing_array.array[k].min_bearing = param.min_ang;
-		bearing_array.array[k].max_bearing = param.max_ang;
-		bearing_array.array[k].Class = param.Class;
-		bearing_array.array[k].xmin = param.xmin;
-		bearing_array.array[k].xmax = param.xmax;
-		bearing_array.array[k].ymin = param.ymin;
-		bearing_array.array[k].ymax = param.ymax;
+		param.Class = msg->bounding_boxes[k].Class;
+		param.probability = msg->bounding_boxes[k].probability;
+		param.xmin = msg->bounding_boxes[k].xmin;
+		param.ymin = msg->bounding_boxes[k].ymin;
+		param.xmax = msg->bounding_boxes[k].xmax;
+		param.ymax = msg->bounding_boxes[k].ymax;
+
+		double centerx = (param.xmax + param.xmin) / 2;
+		param.bearing_array.array[k].bearing = std::atan((param.cx - centerx) / param.fx);
+		param.bearing_array.array[k].min_range = param.min_rng;
+		param.bearing_array.array[k].max_range = param.max_rng;
+		param.bearing_array.array[k].min_bearing = param.min_ang;
+		param.bearing_array.array[k].max_bearing = param.max_ang;
+		param.bearing_array.array[k].Class = param.Class;
+		param.bearing_array.array[k].probability=param.probability;
+		param.bearing_array.array[k].xmin = param.xmin;
+		param.bearing_array.array[k].xmax = param.xmax;
+		param.bearing_array.array[k].ymin = param.ymin;
+		param.bearing_array.array[k].ymax = param.ymax;
+	
+		param.bearing_pub.publish(param.bearing_array);
 	}
 
-	param.bearing_pub.publish(bearing_array);
 
 
 
@@ -93,12 +105,25 @@ int main(int argc, char** argv)
 {
 	//initiattion
 	ros::init(argc, argv, "detection_converter");
-	param.bearing_pub = param.nh.advertise <phd_msgs::BearingArray>("/bridge/measurement", 100);
-	//subscriptions (refer to rostopic list)
-	ros::Subscriber camera_sub = param.nh.subscribe("/usb_cam/camera_info", 1, &camera_info_callback);
-	ros::Subscriber pose_sub = param.nh.subscribe("/pose", 1, &pose_callback);
-	ros::Subscriber det_sub = param.nh.subscribe("/darknet_ros/bounding_boxes", 1, &boundingboxes_callback);
+	ros::NodeHandle nh;
 
-	ros::spinOnce();
+	//if (nh.getParam("/usb_cam/camera_frame_id", param.child_frame_id) )
+	//{
+	//ROS_INFO("Got param: %param.child_frame_id", param.child_frame_id.c_str());
+	//}
+	//else
+	//{
+	//ROS_ERROR("Failed to get param 'usb_cam/head_camera' ");
+	//}
+
+
+	//subscriptions (refer to rostopic list)
+	ros::Subscriber camera_sub = nh.subscribe("/usb_cam/camera_info", 1, &camera_info_callback);
+	ros::Subscriber pose_sub = nh.subscribe("/pose", 1, &pose_callback);
+	ros::Subscriber det_sub = nh.subscribe("/darknet_ros/bounding_boxes", 1, &boundingboxes_callback);
+
+	param.bearing_pub = nh.advertise <phd_msgs::BearingArray>("/bridge/measurement", 100);
+	ROS_INFO("Convering boundingboxes to bearings...");
+	ros::spin();
 	return 0;
 }
